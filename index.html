@@ -117,144 +117,104 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@stacks/connect"></script>
-  <script>
-    // connect wallet 
-    document.getElementById("connect-wallet").addEventListener("click", () => {
-    const appDetails = {
-        name: "Digital Time Capsule",
-        icon: window.location.origin + "/favicon.ico", // Default icon
-    };
+<!-- Include Stacks Wallet Connect Library -->
+<script src="https://unpkg.com/@stacks/connect@latest/dist/connect.umd.js"></script>
 
-    const { userSession, showConnect } = window.connect;
+<script>
+  // 1. App Configuration
+  const appDetails = {
+      name: "Digital Time Capsule",
+      icon: window.location.origin + "/favicon.ico",
+  };
 
-    // Initialize Stacks UserSession
-    const appConfig = new window.connect.AppConfig(["store_write"]);
-    const session = new window.connect.UserSession({ appConfig });
+  const { AppConfig, UserSession, showConnect, openContractCall } = window.connect;
 
-    // Trigger Wallet Connect
-    if (!session.isUserSignedIn()) {
-        showConnect({
-            appDetails,
-            onFinish: () => {
-                console.log("Wallet connected successfully!");
-                document.getElementById("connect-wallet").innerText = "Wallet Connected";
-            },
-            userSession: session,
-        });
-    } else {
-        console.log("User already signed in.");
-        document.getElementById("connect-wallet").innerText = "Wallet Connected";
-    }
-});
+  // 2. Initialize UserSession
+  const appConfig = new AppConfig(["store_write"]); // Permission to write on blockchain
+  const userSession = new UserSession({ appConfig });
 
-    const { showConnect, UserSession, AppConfig } = window["@stacks/connect"];
-    const statusDiv = document.getElementById("status");
-    const connectWalletButton = document.getElementById("connectWalletButton");
-    const lockCapsuleForm = document.getElementById("lockCapsuleForm");
-    const retrieveCapsuleForm = document.getElementById("retrieveCapsuleForm");
-
-    const appConfig = new AppConfig();
-    const userSession = new UserSession({ appConfig });
-
-    function authenticate() {
+  // 3. Wallet Connect Function
+  function connectWallet() {
       if (!userSession.isUserSignedIn()) {
-        showConnect({
-          appDetails: {
-            name: "Digital Time Capsule",
-            icon: window.location.origin + "/icon.png",
-          },
-          redirectTo: "/",
-          onFinish: () => {
-            window.location.reload();
-          },
-        });
-      }
-    }
-
-    async function lockCapsule() {
-      const message = document.getElementById("message").value;
-      const releaseDate = parseInt(document.getElementById("releaseDate").value, 10);
-      const file = document.getElementById("fileUpload").files[0];
-      const nftId = document.getElementById("nftId").value || null;
-
-      if (!message || !releaseDate) {
-        statusDiv.textContent = "Message and release date are required.";
-        return;
-      }
-
-      let fileData = null;
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = async function(e) {
-          const fileHash = e.target.result; // Store file hash
-          await saveCapsule(message, fileHash, nftId, releaseDate);
-        };
-        reader.readAsDataURL(file); // Read file as Base64
+          showConnect({
+              appDetails,
+              onFinish: () => {
+                  console.log("Wallet connected successfully!");
+                  document.getElementById("connect-wallet").innerText = "Wallet Connected";
+              },
+              userSession,
+          });
       } else {
-        await saveCapsule(message, null, nftId, releaseDate);
+          console.log("User already signed in.");
+          document.getElementById("connect-wallet").innerText = "Wallet Connected";
       }
-    }
+  }
 
-    async function saveCapsule(message, fileHash, nftId, releaseDate) {
-      const txOptions = {
-        contractAddress: "ST2M41H0KECFT13AYTPKM83MZRMGM5E3TWQV3C7YC.Digital-Time-Capsule",
-        contractName: "Digital-Time-Capsule",
-        functionName: "lock-capsule",
-        functionArgs: [
-          window.Stacks.makeStringUtf8(message),
-          fileHash ? window.Stacks.makeStringUtf8(fileHash) : window.Stacks.makeNone(),
-          nftId ? window.Stacks.makeTuple([window.Stacks.makePrincipal("ST000000000000000000002AMW42H")], window.Stacks.makeUint(nftId)) : window.Stacks.makeNone(),
-          window.Stacks.makeUint(releaseDate),
-        ],
-        network: new window.Stacks.StacksTestnet(),
-        senderKey: userSession.loadUserData().appPrivateKey,
-      };
+  // 4. Write a Message to Blockchain
+  async function lockMessage() {
+      const message = document.getElementById("message-input").value;
+      const lockTime = document.getElementById("lock-time").value;
+
+      if (!message || !lockTime) {
+          alert("Please enter a message and lock time.");
+          return;
+      }
 
       try {
-        const result = await window.Stacks.makeContractCall(txOptions);
-        console.log(result);
-        statusDiv.textContent = "Capsule locked successfully!";
-        lockCapsuleForm.reset();
+          const contractAddress = "ST2M41H0KECFT13AYTPKM83MZRMGM5E3TWQV3C7YC.Digital-Time-Capsule"; // Replace with deployed contract address
+          const contractName = "Digital-Time-Capsule";      // Replace with deployed contract name
+          const functionName = "lock-message";            // Smart contract function name
+
+          const options = {
+              contractAddress,
+              contractName,
+              functionName,
+              functionArgs: [message, lockTime],
+              network: new window.connect.StacksTestnet(),
+              appDetails,
+              userSession,
+          };
+
+          await openContractCall(options);
+          alert("Message locked successfully!");
       } catch (err) {
-        console.error(err);
-        statusDiv.textContent = "Error locking capsule.";
+          console.error("Error locking message:", err);
+          alert("Failed to lock the message.");
       }
-    }
+  }
 
-    async function retrieveCapsule() {
-      const capsuleId = parseInt(document.getElementById("capsuleId").value, 10);
+  // 5. Attach File / NFT (Future-proof functionality)
+  async function attachFile() {
+      const fileInput = document.getElementById("file-input");
 
-      if (isNaN(capsuleId)) {
-        statusDiv.textContent = "Please enter a valid Capsule ID.";
-        return;
+      if (fileInput.files.length === 0) {
+          alert("Please select a file to upload.");
+          return;
       }
 
-      const txOptions = {
-        contractAddress: "ST2M41H0KECFT13AYTPKM83MZRMGM5E3TWQV3C7YC.Digital-Time-Capsule",
-        contractName: "Digital-Time-Capsule",
-        functionName: "retrieve-capsule",
-        functionArgs: [window.Stacks.makeUint(capsuleId)],
-        network: new window.Stacks.StacksTestnet(),
-      };
+      const file = fileInput.files[0];
 
-      try {
-        const result = await window.Stacks.callReadOnlyFunction(txOptions);
-        console.log(result);
-        if (result.okay) {
-          const capsuleData = result.result;
-          statusDiv.textContent = `Message: ${capsuleData.message}`;
-        } else {
-          statusDiv.textContent = "Capsule is still locked or not found.";
-        }
-      } catch (err) {
-        console.error(err);
-        statusDiv.textContent = "Error retrieving capsule.";
+      // Simulating file storage (Integrate IPFS or storage APIs here)
+      alert(`File "${file.name}" uploaded successfully! (Simulated)`);
+  }
+
+  // 6. Sign Out Functionality
+  function signOut() {
+      if (userSession.isUserSignedIn()) {
+          userSession.signUserOut();
+          alert("Wallet disconnected.");
+          document.getElementById("connect-wallet").innerText = "Connect Wallet";
       }
-    }
+  }
 
-    connectWalletButton.addEventListener("click", authenticate);
-    document.getElementById("lockCapsule").addEventListener("click", lockCapsule);
-    document.getElementById("retrieveCapsule").addEventListener("click", retrieveCapsule);
-  </script>
+  // 7. Event Listeners for Buttons
+  window.onload = () => {
+      document.getElementById("connect-wallet").addEventListener("click", connectWallet);
+      document.getElementById("lock-button").addEventListener("click", lockMessage);
+      document.getElementById("upload-button").addEventListener("click", attachFile);
+      document.getElementById("sign-out").addEventListener("click", signOut);
+  };
+</script>
+
 </body>
 </html>
