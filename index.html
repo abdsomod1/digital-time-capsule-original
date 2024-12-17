@@ -141,11 +141,14 @@
             if (!userSession.isUserSignedIn()) {
                 showConnect({
                     appDetails,
+                    userSession,
                     onFinish: () => {
                         document.getElementById("connect-wallet").innerText = "Wallet Connected";
                         document.getElementById("status").innerText = "Wallet connected. Ready to interact.";
                     },
-                    userSession,
+                    onCancel: () => {
+                        document.getElementById("status").innerText = "Wallet connection canceled.";
+                    },
                 });
             } else {
                 document.getElementById("connect-wallet").innerText = "Wallet Connected";
@@ -188,6 +191,7 @@
                 await openContractCall(options);
             } catch (error) {
                 alert("Failed to lock message.");
+                console.error(error);
             }
         }
 
