@@ -130,7 +130,7 @@
             icon: window.location.origin + "/favicon.ico",
         };
 
-        const { AppConfig, UserSession, showConnect, openContractCall, StacksMainnet, StacksTestnet } = window.connect;
+        const { AppConfig, UserSession, showConnect, openContractCall, StacksTestnet } = window.connect;
 
         // 1. Initialize User Session
         const appConfig = new AppConfig(["store_write"]);
@@ -142,6 +142,7 @@
                 showConnect({
                     appDetails,
                     userSession,
+                    network: new StacksTestnet(), // Ensure we're using StacksTestnet
                     onFinish: () => {
                         document.getElementById("connect-wallet").innerText = "Wallet Connected";
                         document.getElementById("status").innerText = "Wallet connected. Ready to interact.";
