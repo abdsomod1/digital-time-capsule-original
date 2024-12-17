@@ -1,220 +1,210 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Digital Time Capsule</title>
-  <style>
-    body {
-      font-family: 'Arial', sans-serif;
-      background-color: #fff5e6;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Time Capsule</title>
+    <style>
+        /* General Reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-    .container {
-      max-width: 600px;
-      width: 90%;
-      background: #fff;
-      padding: 20px;
-      border-radius: 15px;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-    }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #fffbf2;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
 
-    h1 {
-      text-align: center;
-      color: #e85d04;
-      font-size: 2rem;
-    }
+        h1, h2 {
+            color: #e57c23;
+            text-align: center;
+            margin-bottom: 10px;
+        }
 
-    label {
-      font-weight: bold;
-      margin-top: 15px;
-      display: block;
-      color: #e85d04;
-    }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
 
-    input, textarea, button {
-      width: 100%;
-      padding: 12px;
-      margin: 8px 0;
-      border: 2px solid #e85d04;
-      border-radius: 10px;
-      font-size: 16px;
-      box-sizing: border-box;
-    }
+        button {
+            padding: 10px 15px;
+            font-size: 16px;
+            color: #fff;
+            background-color: #e57c23;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px 0;
+        }
 
-    textarea {
-      resize: none;
-    }
+        button:hover {
+            background-color: #cf6d1c;
+        }
 
-    button {
-      background-color: #e85d04;
-      color: #fff;
-      font-size: 18px;
-      font-weight: bold;
-      cursor: pointer;
-      transition: background 0.3s;
-    }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+        }
 
-    button:hover {
-      background-color: #d9480f;
-    }
+        #status {
+            margin-bottom: 15px;
+            text-align: center;
+            color: #555;
+        }
 
-    .status {
-      text-align: center;
-      margin-top: 20px;
-      font-size: 16px;
-      color: #6a040f;
-    }
+        .file-upload {
+            display: flex;
+            align-items: center;
+        }
 
-    @media screen and (max-width: 768px) {
-      h1 {
-        font-size: 1.8rem;
-      }
-
-      button {
-        font-size: 16px;
-      }
-    }
-  </style>
+        input[type="file"] {
+            flex: 1;
+        }
+    </style>
 </head>
 <body>
-  <div class="container">
     <h1>Digital Time Capsule</h1>
+    <p id="status">Please connect your wallet to interact with the app.</p>
+    
+    <div class="container">
+        <!-- Wallet Connect -->
+        <button id="connect-wallet">Connect Wallet</button>
+        <button id="sign-out">Sign Out</button>
 
-    <div id="connectWallet">
-      <button id="connectWalletButton">Connect Wallet</button>
+        <!-- Message Input Section -->
+        <h2>Lock Your Message</h2>
+        <input type="text" id="message-input" placeholder="Enter your message here" />
+        <input type="datetime-local" id="lock-time" />
+        <button id="lock-button">Lock Message</button>
+
+        <!-- File Upload Section -->
+        <h2>Attach a File</h2>
+        <div class="file-upload">
+            <input type="file" id="file-input" />
+            <button id="upload-button">Attach File</button>
+        </div>
     </div>
 
-    <form id="lockCapsuleForm" style="display: none;">
-      <label for="message">Message:</label>
-      <textarea id="message" rows="3" placeholder="Write your message..."></textarea>
 
-      <label for="fileUpload">Attach File:</label>
-      <input type="file" id="fileUpload">
+    <script>
+        const appDetails = {
+            name: "Digital Time Capsule",
+            icon: window.location.origin + "/favicon.ico",
+        };
 
-      <label for="nftId">Attach NFT (optional):</label>
-      <input type="text" id="nftId" placeholder="Enter NFT ID (e.g., '1234')">
+        const { AppConfig, UserSession, showConnect, openContractCall, StacksTestnet } = window.connect;
 
-      <label for="releaseDate">Release Date (Block Height):</label>
-      <input type="number" id="releaseDate" placeholder="Enter future block height">
+        // 1. Initialize User Session
+        const appConfig = new AppConfig(["store_write"]);
+        const userSession = new UserSession({ appConfig });
 
-      <button type="button" id="lockCapsule">Lock Capsule</button>
-    </form>
+        // 2. Connect Wallet
+        function connectWallet() {
+            if (!userSession.isUserSignedIn()) {
+                showConnect({
+                    appDetails,
+                    onFinish: () => {
+                        console.log("Wallet connected successfully!");
+                        document.getElementById("connect-wallet").innerText = "Wallet Connected";
+                        document.getElementById("status").innerText = "Wallet connected. Ready to interact.";
+                    },
+                    userSession,
+                });
+            } else {
+                document.getElementById("connect-wallet").innerText = "Wallet Connected";
+                document.getElementById("status").innerText = "Wallet already connected.";
+            }
+        }
 
-    <form id="retrieveCapsuleForm" style="display: none;">
-      <label for="capsuleId">Retrieve Capsule by ID:</label>
-      <input type="number" id="capsuleId" placeholder="Enter Capsule ID">
-      <button type="button" id="retrieveCapsule">Retrieve Capsule</button>
-    </form>
+        // 3. Lock Message on Blockchain
+        async function lockMessage() {
+            const message = document.getElementById("message-input").value;
+            const lockTime = document.getElementById("lock-time").value;
 
-    <div class="status" id="status"></div>
-  </div>
+            if (!message || !lockTime) {
+                alert("Please enter a message and lock time.");
+                return;
+            }
 
-  <script src="https://cdn.jsdelivr.net/npm/@stacks/connect"></script>
-<!-- Include Stacks Wallet Connect Library -->
-<script src="https://unpkg.com/@stacks/connect@latest/dist/connect.umd.js"></script>
+            if (!userSession.isUserSignedIn()) {
+                alert("Please connect your wallet first.");
+                return;
+            }
 
-<script>
-  // 1. App Configuration
-  const appDetails = {
-      name: "Digital Time Capsule",
-      icon: window.location.origin + "/favicon.ico",
-  };
+            try {
+                const options = {
+                    contractAddress: "ST2M41H0KECFT13AYTPKM83MZRMGM5E3TWQV3C7YC.Digital-Time-Capsule",
+                    contractName: "Digital-Time-Capsule",
+                    functionName: "lock-message",
+                    functionArgs: [
+                        window.connect.stringUtf8CV(message),
+                        window.connect.uintCV(Math.floor(new Date(lockTime).getTime() / 1000))
+                    ],
+                    network: new StacksTestnet(),
+                    appDetails,
+                    userSession,
+                    onFinish: (data) => {
+                        console.log("Transaction finished:", data);
+                        alert("Message successfully locked on the blockchain!");
+                    },
+                };
 
-  const { AppConfig, UserSession, showConnect, openContractCall } = window.connect;
+                await openContractCall(options);
+            } catch (error) {
+                console.error("Error locking message:", error);
+                alert("Failed to lock message.");
+            }
+        }
 
-  // 2. Initialize UserSession
-  const appConfig = new AppConfig(["store_write"]); // Permission to write on blockchain
-  const userSession = new UserSession({ appConfig });
+        // 4. Attach File
+        function attachFile() {
+            const fileInput = document.getElementById("file-input");
+            if (fileInput.files.length === 0) {
+                alert("Please select a file to attach.");
+                return;
+            }
 
-  // 3. Wallet Connect Function
-  function connectWallet() {
-      if (!userSession.isUserSignedIn()) {
-          showConnect({
-              appDetails,
-              onFinish: () => {
-                  console.log("Wallet connected successfully!");
-                  document.getElementById("connect-wallet").innerText = "Wallet Connected";
-              },
-              userSession,
-          });
-      } else {
-          console.log("User already signed in.");
-          document.getElementById("connect-wallet").innerText = "Wallet Connected";
-      }
-  }
+            const file = fileInput.files[0];
+            alert(`File "${file.name}" attached successfully! (Simulated for now)`);
+            console.log("Attached file:", file);
+        }
 
-  // 4. Write a Message to Blockchain
-  async function lockMessage() {
-      const message = document.getElementById("message-input").value;
-      const lockTime = document.getElementById("lock-time").value;
+        // 5. Sign Out
+        function signOut() {
+            if (userSession.isUserSignedIn()) {
+                userSession.signUserOut();
+                alert("Wallet disconnected.");
+                document.getElementById("connect-wallet").innerText = "Connect Wallet";
+                document.getElementById("status").innerText = "Wallet disconnected. Please connect again.";
+            }
+        }
 
-      if (!message || !lockTime) {
-          alert("Please enter a message and lock time.");
-          return;
-      }
+        // 6. Event Listeners
+        window.onload = () => {
+            document.getElementById("connect-wallet").addEventListener("click", connectWallet);
+            document.getElementById("lock-button").addEventListener("click", lockMessage);
+            document.getElementById("upload-button").addEventListener("click", attachFile);
+            document.getElementById("sign-out").addEventListener("click", signOut);
 
-      try {
-          const contractAddress = "ST2M41H0KECFT13AYTPKM83MZRMGM5E3TWQV3C7YC.Digital-Time-Capsule"; // Replace with deployed contract address
-          const contractName = "Digital-Time-Capsule";      // Replace with deployed contract name
-          const functionName = "lock-message";            // Smart contract function name
-
-          const options = {
-              contractAddress,
-              contractName,
-              functionName,
-              functionArgs: [message, lockTime],
-              network: new window.connect.StacksTestnet(),
-              appDetails,
-              userSession,
-          };
-
-          await openContractCall(options);
-          alert("Message locked successfully!");
-      } catch (err) {
-          console.error("Error locking message:", err);
-          alert("Failed to lock the message.");
-      }
-  }
-
-  // 5. Attach File / NFT (Future-proof functionality)
-  async function attachFile() {
-      const fileInput = document.getElementById("file-input");
-
-      if (fileInput.files.length === 0) {
-          alert("Please select a file to upload.");
-          return;
-      }
-
-      const file = fileInput.files[0];
-
-      // Simulating file storage (Integrate IPFS or storage APIs here)
-      alert(`File "${file.name}" uploaded successfully! (Simulated)`);
-  }
-
-  // 6. Sign Out Functionality
-  function signOut() {
-      if (userSession.isUserSignedIn()) {
-          userSession.signUserOut();
-          alert("Wallet disconnected.");
-          document.getElementById("connect-wallet").innerText = "Connect Wallet";
-      }
-  }
-
-  // 7. Event Listeners for Buttons
-  window.onload = () => {
-      document.getElementById("connect-wallet").addEventListener("click", connectWallet);
-      document.getElementById("lock-button").addEventListener("click", lockMessage);
-      document.getElementById("upload-button").addEventListener("click", attachFile);
-      document.getElementById("sign-out").addEventListener("click", signOut);
-  };
-</script>
-
+            if (userSession.isUserSignedIn()) {
+                document.getElementById("connect-wallet").innerText = "Wallet Connected";
+                document.getElementById("status").innerText = "Wallet connected. Ready to interact.";
+            }
+        };
+    </script>
 </body>
 </html>
