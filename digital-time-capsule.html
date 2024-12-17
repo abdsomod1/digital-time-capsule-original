@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Digital Time Capsule</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      background-color: #fff5e6;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 600px;
+      width: 90%;
+      background: #fff;
+      padding: 20px;
+      border-radius: 15px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    h1 {
+      text-align: center;
+      color: #e85d04;
+      font-size: 2rem;
+    }
+
+    label {
+      font-weight: bold;
+      margin-top: 15px;
+      display: block;
+      color: #e85d04;
+    }
+
+    input, textarea, button {
+      width: 100%;
+      padding: 12px;
+      margin: 8px 0;
+      border: 2px solid #e85d04;
+      border-radius: 10px;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+
+    textarea {
+      resize: none;
+    }
+
+    button {
+      background-color: #e85d04;
+      color: #fff;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background-color: #d9480f;
+    }
+
+    .status {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 16px;
+      color: #6a040f;
+    }
+
+    @media screen and (max-width: 768px) {
+      h1 {
+        font-size: 1.8rem;
+      }
+
+      button {
+        font-size: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Digital Time Capsule</h1>
+
+    <div id="connectWallet">
+      <button id="connectWalletButton">Connect Wallet</button>
+    </div>
+
+    <form id="lockCapsuleForm" style="display: none;">
+      <label for="message">Message:</label>
+      <textarea id="message" rows="3" placeholder="Write your message..."></textarea>
+
+      <label for="fileUpload">Attach File:</label>
+      <input type="file" id="fileUpload">
+
+      <label for="nftId">Attach NFT (optional):</label>
+      <input type="text" id="nftId" placeholder="Enter NFT ID (e.g., '1234')">
+
+      <label for="releaseDate">Release Date (Block Height):</label>
+      <input type="number" id="releaseDate" placeholder="Enter future block height">
+
+      <button type="button" id="lockCapsule">Lock Capsule</button>
+    </form>
+
+    <form id="retrieveCapsuleForm" style="display: none;">
+      <label for="capsuleId">Retrieve Capsule by ID:</label>
+      <input type="number" id="capsuleId" placeholder="Enter Capsule ID">
+      <button type="button" id="retrieveCapsule">Retrieve Capsule</button>
+    </form>
+
+    <div class="status" id="status"></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@stacks/connect"></script>
+  <script>
+    const { showConnect, UserSession, AppConfig } = window["@stacks/connect"];
+    const statusDiv = document.getElementById("status");
+    const connectWalletButton = document.getElementById("connectWalletButton");
+    const lockCapsuleForm = document.getElementById("lockCapsuleForm");
+    const retrieveCapsuleForm = document.getElementById("retrieveCapsuleForm");
+
+    const appConfig = new AppConfig();
+    const userSession = new UserSession({ appConfig });
+
+    function authenticate() {
+      if (!userSession.isUserSignedIn()) {
+        showConnect({
+          appDetails: {
+            name: "Digital Time Capsule",
+            icon: window.location.origin + "/icon.png",
+          },
+          redirectTo: "/",
+          onFinish: () => {
+            window.location.reload();
+          },
+        });
+      }
+    }
+
+    async function lockCapsule() {
+      const message = document.getElementById("message").value;
+      const releaseDate = parseInt(document.getElementById("releaseDate").value, 10);
+      const file = document.getElementById("fileUpload").files[0];
+      const nftId = document.getElementById("nftId").value || null;
+
+      if (!message || !releaseDate) {
+        statusDiv.textContent = "Message and release date are required.";
+        return;
+      }
+
+      let fileData = null;
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+          const fileHash = e.target.result; // Store file hash
+          await saveCapsule(message, fileHash, nftId, releaseDate);
+        };
+        reader.readAsDataURL(file); // Read file as Base64
+      } else {
+        await saveCapsule(message, null, nftId, releaseDate);
+      }
+    }
+
+    async function saveCapsule(message, fileHash, nftId, releaseDate) {
+      const txOptions = {
+        contractAddress: "ST2M41H0KECFT13AYTPKM83MZRMGM5E3TWQV3C7YC.Digital-Time-Capsule",
+        contractName: "Digital-Time-Capsule",
+        functionName: "lock-capsule",
+        functionArgs: [
+          window.Stacks.makeStringUtf8(message),
+          fileHash ? window.Stacks.makeStringUtf8(fileHash) : window.Stacks.makeNone(),
+          nftId ? window.Stacks.makeTuple([window.Stacks.makePrincipal("ST000000000000000000002AMW42H")], window.Stacks.makeUint(nftId)) : window.Stacks.makeNone(),
+          window.Stacks.makeUint(releaseDate),
+        ],
+        network: new window.Stacks.StacksTestnet(),
+        senderKey: userSession.loadUserData().appPrivateKey,
+      };
+
+      try {
+        const result = await window.Stacks.makeContractCall(txOptions);
+        console.log(result);
+        statusDiv.textContent = "Capsule locked successfully!";
+        lockCapsuleForm.reset();
+      } catch (err) {
+        console.error(err);
+        statusDiv.textContent = "Error locking capsule.";
+      }
+    }
+
+    async function retrieveCapsule() {
+      const capsuleId = parseInt(document.getElementById("capsuleId").value, 10);
+
+      if (isNaN(capsuleId)) {
+        statusDiv.textContent = "Please enter a valid Capsule ID.";
+        return;
+      }
+
+      const txOptions = {
+        contractAddress: "ST2M41H0KECFT13AYTPKM83MZRMGM5E3TWQV3C7YC.Digital-Time-Capsule",
+        contractName: "Digital-Time-Capsule",
+        functionName: "retrieve-capsule",
+        functionArgs: [window.Stacks.makeUint(capsuleId)],
+        network: new window.Stacks.StacksTestnet(),
+      };
+
+      try {
+        const result = await window.Stacks.callReadOnlyFunction(txOptions);
+        console.log(result);
+        if (result.okay) {
+          const capsuleData = result.result;
+          statusDiv.textContent = `Message: ${capsuleData.message}`;
+        } else {
+          statusDiv.textContent = "Capsule is still locked or not found.";
+        }
+      } catch (err) {
+        console.error(err);
+        statusDiv.textContent = "Error retrieving capsule.";
+      }
+    }
+
+    connectWalletButton.addEventListener("click", authenticate);
+    document.getElementById("lockCapsule").addEventListener("click", lockCapsule);
+    document.getElementById("retrieveCapsule").addEventListener("click", retrieveCapsule);
+  </script>
+</body>
+</html>
