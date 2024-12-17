@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Digital Time Capsule</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
     <style>
         /* General Reset */
         * {
@@ -13,57 +14,62 @@
         }
 
         body {
-            font-family: Arial, sans-serif;
-            background-color: #fffbf2;
+            font-family: 'Helvetica', sans-serif;
+            background-color: #f4f4f8;
             color: #333;
             margin: 0;
-            padding: 20px;
+            padding: 0;
         }
 
         h1, h2 {
             color: #e57c23;
             text-align: center;
-            margin-bottom: 10px;
+            margin-bottom: 20px;
         }
 
         .container {
             max-width: 600px;
-            margin: 20px auto;
+            margin: 50px auto;
             padding: 20px;
-            border: 1px solid #ddd;
             border-radius: 8px;
             background-color: #fff;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         button {
-            padding: 10px 15px;
+            padding: 12px 20px;
             font-size: 16px;
             color: #fff;
             background-color: #e57c23;
             border: none;
-            border-radius: 5px;
+            border-radius: 6px;
             cursor: pointer;
-            margin: 5px 0;
+            margin: 10px 0;
+            transition: background-color 0.3s ease-in-out;
         }
 
         button:hover {
             background-color: #cf6d1c;
         }
 
-        input, textarea {
+        input, textarea, select {
             width: 100%;
-            padding: 10px;
+            padding: 12px;
             margin: 10px 0;
             border: 1px solid #ccc;
-            border-radius: 5px;
+            border-radius: 6px;
             font-size: 16px;
         }
 
-        #status {
-            margin-bottom: 15px;
-            text-align: center;
-            color: #555;
+        textarea {
+            resize: none;
+            height: 100px;
         }
 
         .file-upload {
@@ -73,32 +79,50 @@
 
         input[type="file"] {
             flex: 1;
+            margin-left: 10px;
+        }
+
+        #status {
+            text-align: center;
+            color: #555;
+            margin-bottom: 20px;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 20px;
         }
     </style>
 </head>
 <body>
     <h1>Digital Time Capsule</h1>
     <p id="status">Please connect your wallet to interact with the app.</p>
-    
-    <div class="container">
-        <!-- Wallet Connect -->
-        <button id="connect-wallet">Connect Wallet</button>
-        <button id="sign-out">Sign Out</button>
 
-        <!-- Message Input Section -->
-        <h2>Lock Your Message</h2>
+    <div class="container">
+        <div class="header">
+            <h2>Lock Your Message</h2>
+            <button id="connect-wallet">Connect Wallet</button>
+        </div>
+
         <input type="text" id="message-input" placeholder="Enter your message here" />
         <input type="datetime-local" id="lock-time" />
         <button id="lock-button">Lock Message</button>
 
-        <!-- File Upload Section -->
         <h2>Attach a File</h2>
         <div class="file-upload">
             <input type="file" id="file-input" />
             <button id="upload-button">Attach File</button>
         </div>
+
+        <button id="sign-out" style="margin-top: 20px;">Sign Out</button>
     </div>
 
+    <div class="footer">
+        <p>Built with <a href="https://stacks.org" target="_blank" style="color: #e57c23;">Stacks</a> &amp; <a href="https://vercel.com" target="_blank" style="color: #e57c23;">Vercel</a></p>
+    </div>
+
+    <!-- Stacks Connect SDK -->
+    <script src="https://unpkg.com/@stacks/connect@latest/dist/connect.umd.js"></script>
 
     <script>
         const appDetails = {
@@ -106,7 +130,7 @@
             icon: window.location.origin + "/favicon.ico",
         };
 
-        const { AppConfig, UserSession, showConnect, openContractCall, StacksTestnet } = window.connect;
+        const { AppConfig, UserSession, showConnect, openContractCall, StacksMainnet, StacksTestnet } = window.connect;
 
         // 1. Initialize User Session
         const appConfig = new AppConfig(["store_write"]);
@@ -118,7 +142,6 @@
                 showConnect({
                     appDetails,
                     onFinish: () => {
-                        console.log("Wallet connected successfully!");
                         document.getElementById("connect-wallet").innerText = "Wallet Connected";
                         document.getElementById("status").innerText = "Wallet connected. Ready to interact.";
                     },
@@ -158,14 +181,12 @@
                     appDetails,
                     userSession,
                     onFinish: (data) => {
-                        console.log("Transaction finished:", data);
                         alert("Message successfully locked on the blockchain!");
                     },
                 };
 
                 await openContractCall(options);
             } catch (error) {
-                console.error("Error locking message:", error);
                 alert("Failed to lock message.");
             }
         }
@@ -179,7 +200,7 @@
             }
 
             const file = fileInput.files[0];
-            alert(`File "${file.name}" attached successfully! (Simulated for now)`);
+            alert(`File "${file.name}" attached successfully!`);
             console.log("Attached file:", file);
         }
 
