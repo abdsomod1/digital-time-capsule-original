@@ -118,6 +118,35 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@stacks/connect"></script>
   <script>
+    // connect wallet 
+    document.getElementById("connect-wallet").addEventListener("click", () => {
+    const appDetails = {
+        name: "Digital Time Capsule",
+        icon: window.location.origin + "/favicon.ico", // Default icon
+    };
+
+    const { userSession, showConnect } = window.connect;
+
+    // Initialize Stacks UserSession
+    const appConfig = new window.connect.AppConfig(["store_write"]);
+    const session = new window.connect.UserSession({ appConfig });
+
+    // Trigger Wallet Connect
+    if (!session.isUserSignedIn()) {
+        showConnect({
+            appDetails,
+            onFinish: () => {
+                console.log("Wallet connected successfully!");
+                document.getElementById("connect-wallet").innerText = "Wallet Connected";
+            },
+            userSession: session,
+        });
+    } else {
+        console.log("User already signed in.");
+        document.getElementById("connect-wallet").innerText = "Wallet Connected";
+    }
+});
+
     const { showConnect, UserSession, AppConfig } = window["@stacks/connect"];
     const statusDiv = document.getElementById("status");
     const connectWalletButton = document.getElementById("connectWalletButton");
